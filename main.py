@@ -1,27 +1,19 @@
-from math import factorial
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.special as sps
 
 from phoneLine import PhoneLine
 
-number_of_lines = 5
-predicted_traffic = [10]
+number_of_lines = 50
+predicted_traffic = [10, 50, 100, 500, 1000]
 
 
 def main():
-    print("Define predicted GOS:\n\n")
+
+    results = []
 
     for traffic in predicted_traffic:
         print("Traffic:", traffic)
         print("No. of lines", number_of_lines)
         print("Predicted GOS:", erlang_b(traffic, number_of_lines))
-        print("\n-----\n")
-
-    print("Part 2. Run Simulation")
-
-    for traffic in predicted_traffic:
-        print("Traffic:", traffic)
 
         call_times = sorted(np.random.uniform(0, 60, traffic))
         call_length = np.random.standard_gamma(10, size=traffic)
@@ -30,7 +22,6 @@ def main():
 
         for i in range(0, number_of_lines - 1):
             phone_lines.append(PhoneLine(0, 0))
-
 
         calls_accepted = 0
         calls_rejected = 0
@@ -64,22 +55,35 @@ def main():
                     print("Call accepted on line", line_number)
                     break
                 else:
-                    print("Line", line_number, "is busy. Trying next line.")
+                    print("Line", line_number, "is busy.")
 
             if call_accepted:
+                print("Call accepted.")
                 calls_accepted += 1
             else:
+                print("Call rejected")
                 calls_rejected += 1
 
-        print("Calls accepted:", calls_accepted)
+        print("\n\nCalls accepted:", calls_accepted)
         print("Calls rejected:", calls_rejected)
 
-        print("GOS:", calls_rejected/traffic, "\n\n")
+        actual_gos = float(calls_rejected) / float(traffic)
 
+        summary = "\n\n---Summary---\n" + \
+            "Number of calls: " + str(traffic) + \
+            "\nNumber of lines: " + str(number_of_lines) + \
+            "\nPredicted GOS: " + str(erlang_b(traffic, number_of_lines)) + \
+            "\nActual GOS: " + str(actual_gos) + \
+            "\n------------\n"
 
+        print(summary)
 
+        results.append(summary)
 
+    print("Full results of all simulations:")
 
+    for result in results:
+        print(result)
 
 def erlang_b(E, m):
     InvB = 1.0
