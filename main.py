@@ -1,9 +1,10 @@
-import numpy as np
+import math
 
+import numpy as np
 from phoneLine import PhoneLine
 
 number_of_lines = 50
-predicted_traffic = [10, 50, 100, 500, 1000]
+predicted_traffic = [10, 50, 100, 1000]
 
 
 def main():
@@ -13,10 +14,15 @@ def main():
     for traffic in predicted_traffic:
         print("Traffic:", traffic)
         print("No. of lines", number_of_lines)
-        print("Predicted GOS:", erlang_b(traffic, number_of_lines))
 
         call_times = sorted(np.random.uniform(0, 60, traffic))
         call_length = np.random.standard_gamma(10, size=traffic)
+        av_call_length = 0
+
+        for length in call_length:
+            av_call_length += length
+
+        print("Predicted GOS:", erlang_b((traffic * (av_call_length / 60)), number_of_lines))
 
         phone_lines = []
 
@@ -85,11 +91,13 @@ def main():
     for result in results:
         print(result)
 
+
 def erlang_b(E, m):
-    InvB = 1.0
+    denom = 0
+
     for j in range(1, m + 1):
-        InvB = 1.0 + InvB * (j / E)
-    return (1.0 / InvB)
+        denom += (E ** j)/(math.factorial(j))
+    return ((E**m)/math.factorial(m))/denom
 
 
 if __name__ == '__main__':
