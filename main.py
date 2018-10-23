@@ -2,21 +2,25 @@ import math
 import random
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 import numpy as np
 import scipy.stats as sp
 from phoneLine import PhoneLine
 
 number_of_lines = 50
-#predicted_traffic = [10, 50, 100, 500, 1000, 2500, 5000]
-predicted_traffic = [10, 50]
+predicted_traffic = [10, 50, 100, 500, 1000, 2500, 5000]
+#predicted_traffic = [10, 50]
 
-call_holding_distributions = ['gamma']#, 'exponential', 'erlang', 'flat']
+
+call_holding_distributions = ['gamma', 'exponential', 'erlang', 'flat']
 simulation_runs = 1000
 
 def main():
 
     results = []
+
+    number_of_loops = 0
 
     for distribution in call_holding_distributions:
 
@@ -73,6 +77,7 @@ def main():
 
                     for line in phone_lines:
                         line_number += 1
+                        number_of_loops += 1
 
                         if line.call_end <= current_call_start:
                             line.call_start = current_call_start
@@ -114,12 +119,19 @@ def main():
         plt.suptitle("GOS vs. No. of Calls for " + distribution + " call holding distribution")
         plt.xlabel("No. of Calls")
         plt.ylabel("GOS")
+
+        red_patch = mpatches.Patch(color='red', label='Actual GOS')
+        blue_patch = mpatches.Patch(color='blue', label='Predicted GOS')
+        plt.legend(handles=[red_patch, blue_patch])
+
         plt.show()
 
     print("\n\n---Summary---\n Full results of all simulations:")
 
     for result in results:
         print(result)
+
+    print(number_of_loops)
 
 
 def erlang_b(E, m):
