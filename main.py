@@ -1,92 +1,122 @@
 import math
+import random
+
+import matplotlib.pyplot as plt
 
 import numpy as np
+import scipy.stats as sp
 from phoneLine import PhoneLine
 
 number_of_lines = 50
-predicted_traffic = [10, 50, 100, 1000]
+#predicted_traffic = [10, 50, 100, 500, 1000, 2500, 5000]
+predicted_traffic = [10, 50]
 
+call_holding_distributions = ['gamma']#, 'exponential', 'erlang', 'flat']
+simulation_runs = 1000
 
 def main():
 
     results = []
 
-    for traffic in predicted_traffic:
-        print("Traffic:", traffic)
-        print("No. of lines", number_of_lines)
+    for distribution in call_holding_distributions:
 
-        call_times = sorted(np.random.uniform(0, 60, traffic))
-        call_length = np.random.standard_gamma(10, size=traffic)
-        av_call_length = 0
+        actual_gos_array = np.empty(len(predicted_traffic))
+        predicted_gos_array = np.empty(len(predicted_traffic))
 
-        for length in call_length:
-            av_call_length += length
+        current_traffic_value = 0
 
-        print("Predicted GOS:", erlang_b((traffic * (av_call_length / 60)), number_of_lines))
+        for traffic in predicted_traffic:
 
-        phone_lines = []
+            actual_gos = 0
+            predicted_gos = 0
 
-        for i in range(0, number_of_lines - 1):
-            phone_lines.append(PhoneLine(0, 0))
+            for run in range(0, simulation_runs):
 
-        calls_accepted = 0
-        calls_rejected = 0
+                call_length = 0
 
-        for i in range(0, traffic):
-            print("\nStarting simulation on call", i)
-            call_accepted = False
-            current_call_start = call_times[i]
-            current_call_end = (call_times[i] + call_length[i])
-            current_call_duration = call_length[i]
+                if distribution == 'gamma':
+                    call_length = np.random.standard_gamma(10, size=traffic)
+                elif distribution == 'exponential':
+                    call_length = np.random.exponential(10, size=traffic)
+                elif distribution == 'erlang':
+                    call_length = sp.erlang.rvs(1, size=traffic, scale=10)
+                elif distribution == 'flat':
+                    call_length = []
+                    for i in range(0, traffic):
+                        call_length.append(random.randint(1, 60))
 
-            print("Call details:")
-            print("Call start time:", current_call_start)
-            print("Call end time:", current_call_end)
-            print("Call duration:", current_call_duration)
+                call_times = sorted(np.random.uniform(0, 60, traffic))
+                av_call_length = 0
+                no_of_calls = 0
 
-            line_number = 0
+                for length in call_length:
+                    no_of_calls += 1
+                    av_call_length += length
 
-            for line in phone_lines:
-                line_number += 1
+                av_call_length = av_call_length / no_of_calls
 
-                print("Checking line", line_number)
-                print("Line status:")
-                print("Line call start time:", line.call_start)
-                print("Line call end time:", line.call_end)
+                phone_lines = []
 
-                if line.call_end <= current_call_start:
-                    line.call_start = current_call_start
-                    line.call_end = current_call_end
-                    call_accepted = True
-                    print("Call accepted on line", line_number)
-                    break
-                else:
-                    print("Line", line_number, "is busy.")
+                for i in range(0, number_of_lines - 1):
+                    phone_lines.append(PhoneLine(0, 0))
 
-            if call_accepted:
-                print("Call accepted.")
-                calls_accepted += 1
-            else:
-                print("Call rejected")
-                calls_rejected += 1
+                calls_accepted = 0
+                calls_rejected = 0
 
-        print("\n\nCalls accepted:", calls_accepted)
-        print("Calls rejected:", calls_rejected)
+                for i in range(0, traffic):
+                    call_accepted = False
+                    current_call_start = call_times[i]
+                    current_call_end = (call_times[i] + call_length[i])
+                    current_call_duration = call_length[i]
 
-        actual_gos = float(calls_rejected) / float(traffic)
+                    line_number = 0
 
-        summary = "\n\n---Summary---\n" + \
-            "Number of calls: " + str(traffic) + \
-            "\nNumber of lines: " + str(number_of_lines) + \
-            "\nPredicted GOS: " + str(erlang_b(traffic, number_of_lines)) + \
-            "\nActual GOS: " + str(actual_gos) + \
-            "\n------------\n"
+                    for line in phone_lines:
+                        line_number += 1
 
-        print(summary)
+                        if line.call_end <= current_call_start:
+                            line.call_start = current_call_start
+                            line.call_end = current_call_end
+                            call_accepted = True
+                            break
 
-        results.append(summary)
+                    if call_accepted:
+                        calls_accepted += 1
+                    else:
+                        calls_rejected += 1
 
-    print("Full results of all simulations:")
+                actual_gos += float(calls_rejected) / float(traffic)
+                predicted_gos += erlang_b(traffic * (av_call_length / 60), number_of_lines)
+
+            actual_gos = actual_gos / simulation_runs
+            predicted_gos = predicted_gos / simulation_runs
+
+            summary = "\n------------\n" + \
+                "Distribution: " + str(distribution) + \
+                "\nNumber of calls: " + str(traffic) + \
+                "\nNumber of lines: " + str(number_of_lines) + \
+                "\nPredicted GOS: " + str(predicted_gos) + \
+                "\nActual GOS: " + str(actual_gos) + \
+                "\n------------\n"
+
+            results.append(summary)
+
+            actual_gos_array[current_traffic_value] = actual_gos
+            predicted_gos_array[current_traffic_value] = predicted_gos
+
+            current_traffic_value += 1
+
+        print(actual_gos_array)
+        print(predicted_gos_array)
+
+        plt.plot(predicted_traffic, actual_gos_array, 'r')
+        plt.plot(predicted_traffic, predicted_gos_array, 'b')
+        plt.suptitle("GOS vs. No. of Calls for " + distribution + " call holding distribution")
+        plt.xlabel("No. of Calls")
+        plt.ylabel("GOS")
+        plt.show()
+
+    print("\n\n---Summary---\n Full results of all simulations:")
 
     for result in results:
         print(result)
